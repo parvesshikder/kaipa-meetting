@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>kaipa meeting scheduler</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+            min-height: 100vh;
+            padding: 40px 50px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 3px;
+            font-size: 1.8em;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 15px;
+            font-size: 0.95em;
+        }
+
+        .week-view {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            margin-bottom: 15px;
+        }
+
+        .day-card {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            border-radius: 12px;
+            padding: 15px;
+            border: 2px solid transparent;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .day-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+        }
+
+        .day-card.active {
+            border-color: #667eea;
+            background: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%);
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .day-header {
+            font-size: 1.4em;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
+        .day-emoji {
+            font-size: 2em;
+            margin-bottom: 5px;
+        }
+
+        .time-input-container {
+            margin: 10px 0;
+        }
+
+        .time-input-container label {
+            display: block;
+            margin-bottom: 5px;
+            color: #555;
+            font-weight: 600;
+            font-size: 0.85em;
+        }
+
+        .time-input-wrapper {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .time-input {
+            flex: 1;
+            padding: 8px;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            font-size: 0.95em;
+            font-family: 'Courier New', monospace;
+        }
+
+        .time-input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .time-slider {
+            width: 100%;
+            height: 5px;
+            border-radius: 3px;
+            background: linear-gradient(to right, #667eea, #764ba2);
+            outline: none;
+            -webkit-appearance: none;
+            appearance: none;
+            margin: 10px 0;
+            cursor: pointer;
+        }
+
+        .time-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #764ba2;
+            cursor: grab;
+        }
+
+        .time-slider::-webkit-slider-thumb:active {
+            cursor: grabbing;
+        }
+
+        .time-slider::-moz-range-thumb {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #764ba2;
+            cursor: grab;
+            border: none;
+        }
+
+        .timezone-display {
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 2px dashed #ddd;
+        }
+
+        .timezone-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 5px 0;
+            padding: 6px;
+            background: rgba(255, 255, 255, 0.6);
+            border-radius: 5px;
+        }
+
+        .timezone-label {
+            font-weight: bold;
+            color: #555;
+            font-size: 0.8em;
+        }
+
+        .timezone-times {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .time-24 {
+            font-family: 'Courier New', monospace;
+            font-size: 0.95em;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .time-12 {
+            font-family: 'Courier New', monospace;
+            font-size: 0.85em;
+            color: #666;
+        }
+
+        .zone-selector {
+            background: #f5f5f5;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 12px;
+            text-align: center;
+        }
+
+        .zone-selector label {
+            margin-right: 8px;
+            font-weight: bold;
+            color: #333;
+            font-size: 0.9em;
+        }
+
+        .zone-selector select {
+            padding: 6px 12px;
+            border: 2px solid #667eea;
+            border-radius: 6px;
+            font-size: 0.9em;
+            background: white;
+            cursor: pointer;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 12px;
+        }
+
+        .btn {
+            padding: 8px 20px;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.9em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: #f5f5f5;
+            color: #333;
+        }
+
+        .btn-secondary:hover {
+            background: #e0e0e0;
+        }
+
+        .current-week {
+            text-align: center;
+            color: #666;
+            margin-bottom: 12px;
+            font-size: 0.9em;
+            font-weight: 600;
+        }
+
+        .copy-all {
+            background: linear-gradient(135deg, #84fab0 0%, #8fd3f4 100%);
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+            text-align: center;
+        }
+
+        .copy-all h3 {
+            margin-bottom: 10px;
+            color: #333;
+            font-size: 1em;
+        }
+
+        .schedule-text {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            text-align: left;
+            max-height: 200px;
+            overflow-y: auto;
+            border: 2px solid #ddd;
+        }
+
+        @media (max-width: 1024px) {
+            .week-view {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 30px 20px;
+            }
+            
+            .container {
+                padding: 15px;
+            }
+            
+            h1 {
+                font-size: 1.5em;
+            }
+            
+            .timezone-times {
+                flex-direction: column;
+                gap: 3px;
+                align-items: flex-end;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📅 kaipa meeting scheduler</h1>
+        <p class="subtitle">Set meeting times for Monday, Wednesday & Friday across 4 timezones</p>
+        
+        <div class="zone-selector">
+            <label>When you set time, it's for:</label>
+            <select id="baseTimezone">
+                <option value="eet">🇪🇪 Estonia (EET)</option>
+                <option value="gmt">🇬🇧 London (GMT)</option>
+                <option value="ict">🇹🇭 Thailand (ICT)</option>
+                <option value="est">🇺🇸 USA (EST)</option>
+            </select>
+        </div>
+
+        <div class="current-week" id="currentWeek"></div>
+
+        <div class="week-view">
+            <!-- Monday -->
+            <div class="day-card" data-day="monday" id="card-monday">
+                <div class="day-header">
+                    <div class="day-emoji">🌙</div>
+                    Monday
+                </div>
+                <div class="time-input-container">
+                    <label>Meeting Time:</label>
+                    <div class="time-input-wrapper">
+                        <input type="time" class="time-input" id="time-monday" value="09:00">
+                    </div>
+                    <input type="range" class="time-slider" id="slider-monday" min="0" max="1439" value="540">
+                </div>
+                <div class="timezone-display">
+                    <div class="timezone-row">
+                        <span class="timezone-label">🇪🇪 Estonia</span>
+                        <div class="timezone-times">
+                            <span class="time-24" id="monday-24-eet">09:00</span>
+                            <span class="time-12" id="monday-12-eet">9:00 AM</span>
+                        </div>
+                    </div>
+                    <div class="timezone-row">
+                        <span class="timezone-label">🇬🇧 London</span>
+                        <div class="timezone-times">
+                            <span class="time-24" id="monday-24-gmt">07:00</span>
+                            <span class="time-12" id="monday-12-gmt">7:00 AM</span>
+                        </div>
+                    </div>
+                    <div class="timezone-row">
+                        <span class="timezone-label">🇹🇭 Thailand</span>
+                        <div class="timezone-times">
+                            <span class="time-24" id="monday-24-ict">14:00</span>
+                            <span class="time-12" id="monday-12-ict">2:00 PM</span>
+                        </div>
+                    </div>
+                    <div class="timezone-row">
+                        <span class="timezone-label">🇺🇸 USA</span>
+                        <div class="timezone-times">
+                            <span class="time-24" id="monday-24-est">02:00</span>
+                            <span class="time-12" id="monday-12-est">2:00 AM</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Wednesday -->
+            <div class="day-card" data-day="wednesday" id="card-wednesday">
+                <div class="day-header">
+                    <div class="day-emoji">☀️</div>
+                    Wednesday
+                </div>
+                <div class="time-input-container">
+                    <label>Meeting Time:</label>
+                    <div class="time-input-wrapper">
+                        <input type="time" class="time-input" id="time-wednesday" value="09:00">
+                    </div>
+                    <input type="range" class="time-slider" id="slider-wednesday" min="0" max="1439" value="540">
+                </div>
+                <div class="timezone-display">
+                    <div class="timezone-row">
+                        <span class="timezone-label">🇪🇪 Estonia</span>
+                        <div class="timezone-times">
+                            <span class="time-24" id="wednesday-24-eet">09:00</span>
+                            <span class="time-12" id="wednesday-12-eet">9:00 AM</span>
+                        </div>
+                    </div>
+                    <div class="timezone-row">
+                        <span class="timezone-label">🇬🇧 London</span>
+                        <div class="timezone-times">
+                            <span class="time-24" id="wednesday-24-gmt">07:00</span>
+                            <span class="time-12" id="wednesday-12-gmt">7:00 AM</span>
+                        </div>
+                    </div>
+                    <div class="timezone-row">
+                        <span class="timezone-label">🇹🇭 Thailand</span>
+                        <div class="timezone-times">
+                            <span class="time-24" id="wednesday-24-ict">14:00</span>
+                            <span class="time-12" id="wednesday-12-ict">2:00 PM</span>
+                        </div>
+                    </div>
+                    <div class="timezone-row">
+                        <span class="timezone-label">🇺🇸 USA</span>
+                        <div class="timezone-times">
+                            <span class="time-24" id="wednesday-24-est">02:00</span>
+                            <span class="time-12" id="wednesday-12-est">2:00 AM</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Friday -->
+            <div class="day-card" data-day="friday" id="card-friday">
+                <div class="day-header">
+                    <div class="day-emoji">🎉</div>
+                    Friday
+                </div>
+                <div class="time-input-container">
+                    <label>Meeting Time:</label>
+                    <div class="time-input-wrapper">
+                        <input type="time" class="time-input" id="time-friday" value="09:00">
+                    </div>
+                    <input type="range" class="time-slider" id="slider-friday" min="0" max="1439" value="540">
+                </div>
+                <div class="timezone-display">
+                    <div class="timezone-row">
+                        <span class="timezone-label">🇪🇪 Estonia</span>
+                        <div class="timezone-times">
+                            <span class="time-24" id="friday-24-eet">09:00</span>
+                            <span class="time-12" id="friday-12-eet">9:00 AM</span>
+                        </div>
+                    </div>
+                    <div class="timezone-row">
+                        <span class="timezone-label">🇬🇧 London</span>
+                        <div class="timezone-times">
+                            <span class="time-24" id="friday-24-gmt">07:00</span>
+                            <span class="time-12" id="friday-12-gmt">7:00 AM</span>
+                        </div>
+                    </div>
+                    <div class="timezone-row">
+                        <span class="timezone-label">🇹🇭 Thailand</span>
+                        <div class="timezone-times">
+                            <span class="time-24" id="friday-24-ict">14:00</span>
+                            <span class="time-12" id="friday-12-ict">2:00 PM</span>
+                        </div>
+                    </div>
+                    <div class="timezone-row">
+                        <span class="timezone-label">🇺🇸 USA</span>
+                        <div class="timezone-times">
+                            <span class="time-24" id="friday-24-est">02:00</span>
+                            <span class="time-12" id="friday-12-est">2:00 AM</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="action-buttons">
+            <button class="btn btn-secondary" id="resetBtn">🔄 Reset All to Default</button>
+            <button class="btn btn-primary" id="copyBtn">📋 Copy All Times</button>
+        </div>
+
+        <div class="copy-all" id="copyAll" style="display: none;">
+            <h3>📋 Weekly Schedule</h3>
+            <div class="schedule-text" id="scheduleText"></div>
+        </div>
+    </div>
+
+    <script>
+        const timezones = {
+            eet: { name: 'Estonia', offset: 2, flag: '🇪🇪' },
+            gmt: { name: 'London', offset: 0, flag: '🇬🇧' },
+            ict: { name: 'Thailand', offset: 7, flag: '🇹🇭' },
+            est: { name: 'USA', offset: -5, flag: '🇺🇸' }
+        };
+
+        const days = ['monday', 'wednesday', 'friday'];
+        let activeDay = 'monday';
+        let baseTimezone = 'eet';
+        
+        // Store meeting times for each day (in minutes from midnight for base timezone)
+        const meetingTimes = {
+            monday: 540,    // 9:00 AM default
+            wednesday: 540,
+            friday: 540
+        };
+
+        function init() {
+            setupEventListeners();
+            updateCurrentWeek();
+            setActiveDay(activeDay);
+            updateAllDisplays();
+        }
+
+        function setupEventListeners() {
+            // Day card clicks
+            document.querySelectorAll('.day-card').forEach(card => {
+                card.addEventListener('click', (e) => {
+                    if (!e.target.classList.contains('time-input') && 
+                        !e.target.classList.contains('time-slider')) {
+                        activeDay = card.dataset.day;
+                        setActiveDay(activeDay);
+                    }
+                });
+            });
+
+            // Time inputs
+            days.forEach(day => {
+                const timeInput = document.getElementById(`time-${day}`);
+                const slider = document.getElementById(`slider-${day}`);
+
+                timeInput.addEventListener('change', (e) => {
+                    const [hours, minutes] = e.target.value.split(':').map(Number);
+                    const totalMinutes = hours * 60 + minutes;
+                    meetingTimes[day] = totalMinutes;
+                    slider.value = totalMinutes;
+                    updateDayDisplay(day);
+                });
+
+                slider.addEventListener('input', (e) => {
+                    const minutes = parseInt(e.target.value);
+                    meetingTimes[day] = minutes;
+                    const hours = Math.floor(minutes / 60);
+                    const mins = minutes % 60;
+                    timeInput.value = `${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}`;
+                    updateDayDisplay(day);
+                });
+            });
+
+            // Base timezone selector
+            document.getElementById('baseTimezone').addEventListener('change', (e) => {
+                baseTimezone = e.target.value;
+                updateAllDisplays();
+            });
+
+            // Reset button
+            document.getElementById('resetBtn').addEventListener('click', () => {
+                days.forEach(day => {
+                    meetingTimes[day] = 540; // 9:00 AM
+                    document.getElementById(`time-${day}`).value = '09:00';
+                    document.getElementById(`slider-${day}`).value = 540;
+                });
+                updateAllDisplays();
+            });
+
+            // Copy button
+            document.getElementById('copyBtn').addEventListener('click', () => {
+                generateScheduleText();
+                const copyDiv = document.getElementById('copyAll');
+                copyDiv.style.display = copyDiv.style.display === 'none' ? 'block' : 'none';
+                
+                const text = document.getElementById('scheduleText');
+                text.select();
+                document.execCommand('copy');
+                alert('Schedule copied to clipboard!');
+            });
+        }
+
+        function setActiveDay(day) {
+            document.querySelectorAll('.day-card').forEach(card => {
+                card.classList.remove('active');
+            });
+            document.getElementById(`card-${day}`).classList.add('active');
+            activeDay = day;
+        }
+
+        function updateDayDisplay(day) {
+            const baseMinutes = meetingTimes[day];
+            const baseHours = Math.floor(baseMinutes / 60);
+            const baseMins = baseMinutes % 60;
+
+            // Create a date object for this time in the base timezone
+            const today = new Date();
+            const dayOfWeek = today.getDay();
+            const mondayOffset = dayOfWeek === 0 ? 1 : (dayOfWeek === 1 ? 0 : 1 - dayOfWeek);
+            
+            let targetDay;
+            if (day === 'monday') targetDay = 1;
+            else if (day === 'wednesday') targetDay = 3;
+            else targetDay = 5;
+
+            const daysToAdd = targetDay - dayOfWeek;
+            const meetingDate = new Date(today);
+            meetingDate.setDate(today.getDate() + daysToAdd);
+            meetingDate.setHours(baseHours, baseMins, 0, 0);
+
+            // Convert to UTC
+            const utcTime = meetingDate.getTime() - (timezones[baseTimezone].offset * 60 * 60 * 1000);
+
+            // Update display for all timezones
+            Object.keys(timezones).forEach(zone => {
+                const localTime = new Date(utcTime + (timezones[zone].offset * 60 * 60 * 1000));
+                
+                const time24 = localTime.toLocaleTimeString('en-US', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: false
+                });
+                
+                const time12 = localTime.toLocaleTimeString('en-US', {
+                    hour: 'numeric',
+                    minute: '2-digit',
+                    hour12: true
+                });
+
+                document.getElementById(`${day}-24-${zone}`).textContent = time24;
+                document.getElementById(`${day}-12-${zone}`).textContent = time12;
+            });
+        }
+
+        function updateAllDisplays() {
+            days.forEach(day => {
+                updateDayDisplay(day);
+            });
+        }
+
+        function updateCurrentWeek() {
+            const today = new Date();
+            const monday = new Date(today);
+            const dayOfWeek = today.getDay();
+            const mondayOffset = dayOfWeek === 0 ? 1 : (dayOfWeek === 1 ? 0 : 1 - dayOfWeek);
+            monday.setDate(today.getDate() + mondayOffset);
+            
+            const friday = new Date(monday);
+            friday.setDate(monday.getDate() + 4);
+
+            const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
+                'July', 'August', 'September', 'October', 'November', 'December'];
+
+            document.getElementById('currentWeek').textContent = 
+                `Week of ${monthNames[monday.getMonth()]} ${monday.getDate()} - ${monthNames[friday.getMonth()]} ${friday.getDate()}, ${monday.getFullYear()}`;
+        }
+
+        function generateScheduleText() {
+            let text = '📅 WEEKLY MEETING SCHEDULE\n';
+            text += '═══════════════════════════════════════════\n\n';
+
+            const dayNames = {
+                monday: 'Monday',
+                wednesday: 'Wednesday',
+                friday: 'Friday'
+            };
+
+            days.forEach(day => {
+                text += `📌 ${dayNames[day].toUpperCase()}\n`;
+                text += `   Base Time (${timezones[baseTimezone].flag} ${timezones[baseTimezone].name}): `;
+                
+                const minutes = meetingTimes[day];
+                const hours = Math.floor(minutes / 60);
+                const mins = minutes % 60;
+                const timeStr = `${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}`;
+                
+                // Get 12-hour format
+                const date = new Date();
+                date.setHours(hours, mins);
+                const time12 = date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+                
+                text += `${timeStr} (${time12})\n`;
+                
+                Object.keys(timezones).forEach(zone => {
+                    if (zone !== baseTimezone) {
+                        const time24 = document.getElementById(`${day}-24-${zone}`).textContent;
+                        const time12 = document.getElementById(`${day}-12-${zone}`).textContent;
+                        text += `   ${timezones[zone].flag} ${timezones[zone].name}: ${time24} (${time12})\n`;
+                    }
+                });
+                text += '\n';
+            });
+
+            document.getElementById('scheduleText').textContent = text;
+        }
+
+        init();
+    </script>
+</body>
+</html>
