@@ -268,6 +268,11 @@
             border-radius: 8px;
             margin-top: 15px;
             text-align: center;
+            display: none !important;
+            visibility: hidden;
+            opacity: 0;
+            position: absolute;
+            left: -9999px;
         }
 
         .copy-all h3 {
@@ -318,7 +323,7 @@
 <body>
     <div class="container">
         <h1>📅 kaipa meeting scheduler</h1>
-        <p class="subtitle">Set meeting times for Monday, Wednesday & Friday across 4 timezones</p>
+        <p class="subtitle">Set meeting times for Monday, Wednesday & Friday across 5 timezones (Estonia, London, Thailand, Japan & LA)</p>
         
         <div class="zone-selector">
             <label>When you set time, it's for:</label>
@@ -326,7 +331,8 @@
                 <option value="eet">🇪🇪 Estonia (EET)</option>
                 <option value="gmt">🇬🇧 London (GMT)</option>
                 <option value="ict">🇹🇭 Thailand (ICT)</option>
-                <option value="est">🇺🇸 USA (EST)</option>
+                <option value="jst">🇯🇵 Japan (JST)</option>
+                <option value="pst">🇺🇸 LA Time (PST)</option>
             </select>
         </div>
 
@@ -369,10 +375,17 @@
                         </div>
                     </div>
                     <div class="timezone-row">
-                        <span class="timezone-label">🇺🇸 USA</span>
+                        <span class="timezone-label">🇯🇵 Japan</span>
                         <div class="timezone-times">
-                            <span class="time-24" id="monday-24-est">02:00</span>
-                            <span class="time-12" id="monday-12-est">2:00 AM</span>
+                            <span class="time-24" id="monday-24-jst">16:00</span>
+                            <span class="time-12" id="monday-12-jst">4:00 PM</span>
+                        </div>
+                    </div>
+                    <div class="timezone-row">
+                        <span class="timezone-label">🇺🇸 LA Time</span>
+                        <div class="timezone-times">
+                            <span class="time-24" id="monday-24-pst">23:00</span>
+                            <span class="time-12" id="monday-12-pst">11:00 PM</span>
                         </div>
                     </div>
                 </div>
@@ -414,10 +427,17 @@
                         </div>
                     </div>
                     <div class="timezone-row">
-                        <span class="timezone-label">🇺🇸 USA</span>
+                        <span class="timezone-label">🇯🇵 Japan</span>
                         <div class="timezone-times">
-                            <span class="time-24" id="wednesday-24-est">02:00</span>
-                            <span class="time-12" id="wednesday-12-est">2:00 AM</span>
+                            <span class="time-24" id="wednesday-24-jst">16:00</span>
+                            <span class="time-12" id="wednesday-12-jst">4:00 PM</span>
+                        </div>
+                    </div>
+                    <div class="timezone-row">
+                        <span class="timezone-label">🇺🇸 LA Time</span>
+                        <div class="timezone-times">
+                            <span class="time-24" id="wednesday-24-pst">23:00</span>
+                            <span class="time-12" id="wednesday-12-pst">11:00 PM</span>
                         </div>
                     </div>
                 </div>
@@ -459,10 +479,17 @@
                         </div>
                     </div>
                     <div class="timezone-row">
-                        <span class="timezone-label">🇺🇸 USA</span>
+                        <span class="timezone-label">🇯🇵 Japan</span>
                         <div class="timezone-times">
-                            <span class="time-24" id="friday-24-est">02:00</span>
-                            <span class="time-12" id="friday-12-est">2:00 AM</span>
+                            <span class="time-24" id="friday-24-jst">16:00</span>
+                            <span class="time-12" id="friday-12-jst">4:00 PM</span>
+                        </div>
+                    </div>
+                    <div class="timezone-row">
+                        <span class="timezone-label">🇺🇸 LA Time</span>
+                        <div class="timezone-times">
+                            <span class="time-24" id="friday-24-pst">23:00</span>
+                            <span class="time-12" id="friday-12-pst">11:00 PM</span>
                         </div>
                     </div>
                 </div>
@@ -485,7 +512,8 @@
             eet: { name: 'Estonia', offset: 2, flag: '🇪🇪' },
             gmt: { name: 'London', offset: 0, flag: '🇬🇧' },
             ict: { name: 'Thailand', offset: 7, flag: '🇹🇭' },
-            est: { name: 'USA', offset: -5, flag: '🇺🇸' }
+            jst: { name: 'Japan', offset: 9, flag: '🇯🇵' },
+            pst: { name: 'LA Time', offset: -8, flag: '🇺🇸' }
         };
 
         const days = ['monday', 'wednesday', 'friday'];
@@ -560,13 +588,43 @@
             // Copy button
             document.getElementById('copyBtn').addEventListener('click', () => {
                 generateScheduleText();
-                const copyDiv = document.getElementById('copyAll');
-                copyDiv.style.display = copyDiv.style.display === 'none' ? 'block' : 'none';
+                // Don't show the copy area on screen - just copy silently
                 
-                const text = document.getElementById('scheduleText');
-                text.select();
-                document.execCommand('copy');
-                alert('Schedule copied to clipboard!');
+                // Use modern clipboard API if available
+                const scheduleText = document.getElementById('scheduleText').textContent;
+                if (navigator.clipboard && window.isSecureContext) {
+                    navigator.clipboard.writeText(scheduleText).then(() => {
+                        // Silent copy - no popup, just button feedback
+                        document.getElementById('copyBtn').textContent = '✅ Copied!';
+                        setTimeout(() => {
+                            document.getElementById('copyBtn').textContent = '📋 Copy All Times';
+                        }, 2000);
+                    }).catch(() => {
+                        // Fallback to selection method
+                        fallbackCopy();
+                    });
+                } else {
+                    fallbackCopy();
+                }
+                
+                function fallbackCopy() {
+                    // Create temporary textarea for fallback copy
+                    const tempTextarea = document.createElement('textarea');
+                    tempTextarea.value = scheduleText;
+                    tempTextarea.style.position = 'fixed';
+                    tempTextarea.style.left = '-999999px';
+                    tempTextarea.style.top = '-999999px';
+                    document.body.appendChild(tempTextarea);
+                    tempTextarea.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(tempTextarea);
+                    
+                    // Silent copy - no popup, just button feedback
+                    document.getElementById('copyBtn').textContent = '✅ Copied!';
+                    setTimeout(() => {
+                        document.getElementById('copyBtn').textContent = '📋 Copy All Times';
+                    }, 2000);
+                }
             });
         }
 
@@ -646,39 +704,35 @@
         }
 
         function generateScheduleText() {
-            let text = '📅 WEEKLY MEETING SCHEDULE\n';
-            text += '═══════════════════════════════════════════\n\n';
-
             const dayNames = {
-                monday: 'Monday',
-                wednesday: 'Wednesday',
-                friday: 'Friday'
+                monday: '🌙 MONDAY',
+                wednesday: '☀️ WEDNESDAY', 
+                friday: '🎉 FRIDAY'
             };
 
-            days.forEach(day => {
-                text += `📌 ${dayNames[day].toUpperCase()}\n`;
-                text += `   Base Time (${timezones[baseTimezone].flag} ${timezones[baseTimezone].name}): `;
+            let text = '📅 KAIPA WEEKLY MEETING\n\n\n';
+
+            days.forEach((day, index) => {
+                const dayName = dayNames[day];
                 
-                const minutes = meetingTimes[day];
-                const hours = Math.floor(minutes / 60);
-                const mins = minutes % 60;
-                const timeStr = `${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}`;
+                // Get times for all zones (12-hour format)
+                const eetTime = document.getElementById(`${day}-12-eet`).textContent;
+                const gmtTime = document.getElementById(`${day}-12-gmt`).textContent;
+                const ictTime = document.getElementById(`${day}-12-ict`).textContent;
+                const jstTime = document.getElementById(`${day}-12-jst`).textContent;
+                const pstTime = document.getElementById(`${day}-12-pst`).textContent;
+
+                text += `${dayName}\n\n`;
+                text += `🇪🇪 Estonia: ${eetTime}\n`;
+                text += `🇬🇧 London: ${gmtTime}\n`;
+                text += `🇹🇭 Thailand: ${ictTime}\n`;
+                text += `🇯🇵 Japan: ${jstTime}\n`;
+                text += `🇺🇸 LA Time: ${pstTime}\n`;
                 
-                // Get 12-hour format
-                const date = new Date();
-                date.setHours(hours, mins);
-                const time12 = date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
-                
-                text += `${timeStr} (${time12})\n`;
-                
-                Object.keys(timezones).forEach(zone => {
-                    if (zone !== baseTimezone) {
-                        const time24 = document.getElementById(`${day}-24-${zone}`).textContent;
-                        const time12 = document.getElementById(`${day}-12-${zone}`).textContent;
-                        text += `   ${timezones[zone].flag} ${timezones[zone].name}: ${time24} (${time12})\n`;
-                    }
-                });
-                text += '\n';
+                // Add spacing between days
+                if (index < days.length - 1) {
+                    text += '\n\n';
+                }
             });
 
             document.getElementById('scheduleText').textContent = text;
